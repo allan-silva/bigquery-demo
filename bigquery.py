@@ -62,10 +62,41 @@ def migrate_schema(table, schema):
     return table
 
 
+def insert_table_v1_data(update_log_table):
+    rows = [
+        ("https://aus5.mozilla.org/update/3/SystemAddons", "3"),
+        ("https://aus5.mozilla.org/update/3/GMP", "3")
+    ]
+    client.insert_rows(update_log_table, rows)
+
+
+def insert_table_v2_data(update_log_table):
+    rows = [
+        ("https://aus5.mozilla.org/update/3/SystemAddons", "3", "SystemAddons"),
+        ("https://aus5.mozilla.org/update/3/GMP", "3", "GMP")
+    ]
+    client.insert_rows(update_log_table, rows)
+
+
+def clear(dataset_name):
+    client.delete_dataset(
+        dataset_id(dataset_name), delete_contents=True)
+
+
 def run():
+    clear(BIGQUERY_DATASET)
     balrog_dataset = get_dataset(BIGQUERY_DATASET)
     update_log_table = get_table(balrog_dataset, "update_log")
     update_log_table = migrate_schema(update_log_table, get_update_log_table_schema())
+    insert_table_v1_data(update_log_table)
+
+    migrate_schema(update_log_table, [
+        bigquery.SchemaField(
+            "product", "STRING", mode="NULLABLE", description="Product")
+    ])
+
+    insert_table_v2_data(update_log_table)
+
     print([field for field in update_log_table.schema])
 
 
